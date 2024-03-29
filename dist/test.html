@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+
+<html itemscope itemtype="https://schema.org/QAPage" class="html__responsive " lang="en">
+
+<head>
+
+	<title>javascript - Typescript compile to single file - Stack Overflow</title>
+	<script src="./_dom.js"></script>
+
+</head>
+
+<body class="question-page unified-theme theme-dark">
+
+	<script>
+		// const __dom = _dom.default;
+		// Object.keys(_dom).filter(k => k !== 'default').forEach(k => {
+		// 	__dom[k] = _dom[k];
+		// })
+		// _dom = __dom;
+		console.log('window', window);
+		const dd = _dom('div', {}, ["zog"]);
+		document.body.appendChild(dd);
+		let model = _dom.DomModel;
+		console.log("model", model);
+		class ZZModel extends _dom.DomModel {
+			_domOnBuild(...args) {
+				return _dom('div', {
+					// className:'heroz-test2'
+				}, ['tst2']);
+			}
+		}
+		let zz = new ZZModel();
+		document.body.appendChild(zz.dom);
+	</script>
+
+</body>
+
+</html>

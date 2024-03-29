@@ -1,0 +1,36 @@
+{
+	"name": "dom-for-node",
+	"version": "3.0.0",
+	"description": "",
+	"main": "./index.js",
+	"types": "./types/index.d.ts",
+	"scripts": {
+		"build": "npx webpack",
+		"watch": "npx webpack -w",
+		"doc": "npx typedoc src/index.ts && node ./toolz/docFix.cjs",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"web",
+		"html",
+		"dom",
+		"app",
+		"webapp",
+		"applications",
+		"css",
+		"scss",
+		"templates",
+		"components"
+	],
+	"author": "Yorg",
+	"license": "ISC",
+	"devDependencies": {
+		"node-styl": "^0.0.6",
+		"ts-loader": "^9.5.1",
+		"tsc-watch": "^6.0.0",
+		"typedoc": "^0.25.1",
+		"typescript": "^5.3.3",
+		"webpack": "^5.90.2",
+		"webpack-cli": "^5.1.4"
+	}
+}
