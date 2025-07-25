@@ -1,11 +1,10 @@
 // import { DomModelContructorType, DomModule, Listener, ListenerEvent } from "..";
-import { CssVarsType, RRecord, DomRulesType, DomRulesDataType } from "./types";
+import { DomAttributesObserver, DomModule } from "../_dom";
+import { Listener, ListenerEvent } from "../tools/Listener";
 import { DomCore } from "./DomCore";
 import { DomCss } from "./DomCss";
 import { DomLifeObserver } from "./DomLifeObserver";
-import { Classes } from "../tools/Classes";
-import { Listener, ListenerEvent } from "../tools/Listener";
-import { DomAttributesObserver, DomModule } from "../_dom";
+import { CssVarsType, DomRulesDataType, DomRulesType } from "./types";
 
 export type DomModelClassType = (new (...args: any[]) => DomModel) &
 	Pick<typeof DomModel, keyof typeof DomModel>;
@@ -148,20 +147,27 @@ export class DomModel<T extends HTMLElement = HTMLElement> {
 		// console.log(this.constructor.name);
 		return new (this.constructor as DomModelClassType)(this._inputs, this._children);
 	}
-	private ___init_dom_model(inputs?: Record<string, any>, children: Array<DomChildType> = []) {
+	private async ___init_dom_model(
+		inputs?: Record<string, any>,
+		children: Array<DomChildType> = []
+	) {
 		const constr = this.constructor as DomModelClassType;
 		// if(!constr.tagName)alert(DomCore.objName2tagName(constr.name).slice(1));
 		DomModel.initTagName(constr);
+		this._dom = document.createElement(this.tagName);
 
-		this._domOnInit(inputs, children);
+		const initProm = this._domOnInit(inputs, children);
+		if (initProm instanceof Promise) await initProm;
+
 		this._mp_listener.flush("init", this);
 
-		this._dom = document.createElement(this.tagName);
 		if (constr.className) {
 			this._dom.className = constr.className;
 		}
 
-		let dom = this._domOnBuild(inputs, children);
+		const domProm = this._domOnBuild(inputs, children);
+		let dom = domProm instanceof Promise ? await domProm : domProm;
+
 		if (!(dom instanceof Array)) dom = [dom];
 
 		if (
@@ -205,24 +211,26 @@ export class DomModel<T extends HTMLElement = HTMLElement> {
 		}
 		this._mp_listener.flush("build", this);
 
-		this._domOnAfterInit(inputs, children);
+		const afterProm = this._domOnAfterInit(inputs, children);
+		if (afterProm instanceof Promise) await afterProm;
+
 		this._mp_listener.flush("afterinit", this);
 
 		if (this._requireLifeObserver) this._initLifeObserver();
 
 		if (this._domOnReady !== DomModel.prototype._domOnReady) {
-			this._domOn("ready", (evt: ListenerEvent<"ready", any>) => {
-				this._domOnReady();
+			this._domOn("ready", async (evt: ListenerEvent<"ready", any>) => {
+				await this._domOnReady();
 			});
 		}
 		if (this._domOnDestroy !== DomModel.prototype._domOnDestroy) {
-			this._domOn("destroy", (evt: ListenerEvent<"destroy", any>) => {
-				this._domOnDestroy();
+			this._domOn("destroy", async (evt: ListenerEvent<"destroy", any>) => {
+				await this._domOnDestroy();
 			});
 		}
 		if (this._domOnAttributeChange !== DomModel.prototype._domOnAttributeChange) {
-			this._domOn("attributechange", (evt: ListenerEvent<"attributechange", any>) => {
-				this._domOnAttributeChange(evt.data.name, evt.data.value, evt.data.oldValue);
+			this._domOn("attributechange", async (evt: ListenerEvent<"attributechange", any>) => {
+				await this._domOnAttributeChange(evt.data.name, evt.data.value, evt.data.oldValue);
 			});
 		}
 		if (inputs && this._inputListener) {
@@ -338,15 +346,21 @@ export class DomModel<T extends HTMLElement = HTMLElement> {
 
 	// ----------------- Overrides
 
-	_domOnInit(params?: Record<string, any>, children: Array<DomChildType> = []) {}
-	_domOnAfterInit(params?: Record<string, any>, children: Array<DomChildType> = []) {}
-	_domOnAttributeChange(name: string, value: any, oldValue: any) {}
-	_domOnReady() {}
-	_domOnDestroy() {}
+	_domOnInit(
+		params?: Record<string, any>,
+		children: Array<DomChildType> = []
+	): Promise<unknown> | void {}
+	_domOnAfterInit(
+		params?: Record<string, any>,
+		children: Array<DomChildType> = []
+	): Promise<unknown> | void {}
+	_domOnAttributeChange(name: string, value: any, oldValue: any): Promise<unknown> | void {}
+	_domOnReady(): Promise<unknown> | void {}
+	_domOnDestroy(): Promise<unknown> | void {}
 	_domOnBuild(
 		params?: Record<string, any>,
 		children: Array<DomChildType> = []
-	): HTMLElement | Array<DomChildType> {
+	): HTMLElement | Array<DomChildType> | Promise<HTMLElement> | Promise<Array<DomChildType>> {
 		return undefined;
 	}
 }

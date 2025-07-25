@@ -1,27 +1,27 @@
-import { DomParamsType, DomRulesDataType, RRecord } from "./core/types";
 import { Classes } from "./_dom";
 import { DomBaseModule } from "./core/DomBaseModule";
 import { DomCore } from "./core/DomCore";
 import { DomCss } from "./core/DomCss";
+import { CssVarsType, DomParamsType, DomRulesDataType, RRecord } from "./core/types";
 
 import { DomChildType, DomModel, DomModelClassType } from "./core/DomModel";
-import { DomUtils } from "./core/DomUtils";
+import { DomUtils, LoadMediaProgress } from "./core/DomUtils";
 import { Cookie } from "./tools/Cookie";
 import { DomStore } from "./tools/DomStore";
 
-export * from "./core/types";
+export * from "./core/DomAttributesObserver";
 export * from "./core/DomCore";
 export * from "./core/DomCss";
-export * from "./core/DomModel";
-export * from "./core/DomAttributesObserver";
 export * from "./core/DomLifeObserver";
-export * from "./tools/DataList";
-export * from "./tools/DomStore";
-export * from "./tools/Listener";
-export * from "./tools/EventBuffer";
+export * from "./core/DomModel";
+export * from "./core/types";
 export * from "./tools/Classes";
-export * from "./tools/DomRouter";
+export * from "./tools/DataList";
 export * from "./tools/DomLang";
+export * from "./tools/DomRouter";
+export * from "./tools/DomStore";
+export * from "./tools/EventBuffer";
+export * from "./tools/Listener";
 export * from "./tools/Player";
 
 /**
@@ -76,9 +76,26 @@ export interface _domType {
 	// --------- utils
 
 	getAttributes: (target: HTMLElement) => Record<string, any>;
-	loadImage: (src: string) => Promise<HTMLImageElement>;
+	loadMediaUri: (src: string, onProgress?: (p: LoadMediaProgress) => void) => Promise<string>;
+	loadImage: (
+		src: string,
+		onProgress?: (p: LoadMediaProgress) => void
+	) => Promise<HTMLImageElement>;
+
 	img2canvas: (img: HTMLImageElement) => HTMLCanvasElement;
 	loadCanvas: (src: string) => Promise<HTMLCanvasElement>;
+
+	getParentPile: (
+		dom: HTMLElement,
+		condition: (dom: Element) => boolean | void,
+		maxDeep?: number
+	) => HTMLElement[] | null;
+	findParent: (
+		dom: HTMLElement,
+		condition: (dom: Element) => boolean | void,
+		maxDeep?: number
+	) => HTMLElement | null;
+
 	download: (
 		fileName: string,
 		src: String | HTMLImageElement | File | Blob | { toDataURL: Function; [k: string]: any }
@@ -87,6 +104,11 @@ export interface _domType {
 	downloadFile: (src: File) => void;
 
 	higherZindex: (parent: HTMLElement) => number;
+	handleCssVars: (
+		root?: string,
+		cssVars?: { [k: string]: string },
+		sheet?: CSSStyleSheet
+	) => CssVarsType;
 
 	// [k:string]:any
 }
@@ -242,8 +264,14 @@ const _dom = function (module: DomModule) {
 	_dom.getAttributes = function (target: HTMLElement) {
 		return DomUtils.getAttributes(target);
 	};
-	_dom.loadImage = function (src: string) {
-		return DomUtils.loadImage(src);
+	_dom.loadMediaUri = function (
+		src: string,
+		onProgress: (p: LoadMediaProgress) => void = () => {}
+	) {
+		return DomUtils.loadMediaUri(src, onProgress);
+	};
+	_dom.loadImage = function (src: string, onProgress: (p: LoadMediaProgress) => void = () => {}) {
+		return DomUtils.loadImage(src, onProgress);
 	};
 
 	_dom.img2canvas = function (img: HTMLImageElement): HTMLCanvasElement {
@@ -252,6 +280,21 @@ const _dom = function (module: DomModule) {
 
 	_dom.loadCanvas = function (src: string) {
 		return DomUtils.loadCanvas(src);
+	};
+
+	_dom.getParentPile = function (
+		dom: HTMLElement,
+		condition: (dom: Element) => boolean | void,
+		maxDeep: number = 10
+	): HTMLElement[] | null {
+		return DomUtils.getParentPile(dom, condition, maxDeep);
+	};
+	_dom.findParent = function (
+		dom: HTMLElement,
+		condition: (dom: Element) => boolean | void,
+		maxDeep: number = 10
+	): HTMLElement | null {
+		return DomUtils.findParent(dom, condition, maxDeep);
 	};
 
 	_dom.download = function (
@@ -267,6 +310,21 @@ const _dom = function (module: DomModule) {
 
 	_dom.higherZindex = function (parent: HTMLElement = document.body) {
 		return DomCss.higherZindex(parent);
+	};
+
+	/**
+	 * Handle css variables
+	 * @param root css root query
+	 * @param cssVars default css vars values
+	 * @param sheet target css styleSheet
+	 * @returns a proxy for the css vars values
+	 */
+	_dom.handleCssVars = function (
+		root?: string,
+		cssVars?: { [k: string]: string },
+		sheet?: CSSStyleSheet
+	): CssVarsType {
+		return DomCss.handleVars(root, cssVars, sheet);
 	};
 
 	return _dom;

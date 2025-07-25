@@ -36,19 +36,17 @@ The purposes of **\_dom.js** are:
     *   [\_dom.rule](#_dom.rule)
     *   [\_dom.rules](#_dom.rules)
 *   [Templating](#tg_temlating)
-    *   [\_dom.model](#_dom.model)
-    *   [Model creator](#tg_model_creator)
-*   [V3 features](#tg_v2features)
+*   [V3 features](#tg_v3features)
 
-API [documentation](reference.md).
+API [documentation](https://html-preview.github.io/?url=https://raw.githubusercontent.com/yorgsite/_dom.3/master/docs/classes/DomStore.html).
 
-## Use in web page
+## <a name="tg_webjs"></a>Use in web page
 
 ```plaintext
 <script src="./path/to/_dom.js"></script>
 ```
 
-## Use with nodejs
+## <a name="tg_nodejs"></a> Use with nodejs
 
 For web translators like **webpack**.
 
@@ -70,7 +68,7 @@ Import (ts) :
 import _dom from 'dom-for-node';
 ```
 
-## html
+## <a name="tg_html"></a> html
 
 #### Instanciate html elements or structure
 
@@ -96,9 +94,9 @@ var div=_dom('div',{style:{border:'solid 1px #0f0'}},[
 document.body.appendChild(div);
 ```
 
-## css
+## <a name="tg_css"></a>css
 
-#### create dynamics css rules.
+#### <a name="_dom.rule"></a>create dynamics css rules.
 
 `_dom.rule(selector, datas)`
 
@@ -116,7 +114,7 @@ setTimeout(function(){
 },2000);
 ```
 
-#### Create rules collection with sass like structures
+#### <a name="_dom.rules"></a>Create rules collection with sass like structures
 
 `_dom.rules(datas)`
 
@@ -147,7 +145,7 @@ setTimeout(function(){
 },2000);
 ```
 
-## Templating
+## <a name="tg_temlating"></a>Templating
 
 #### Add custom structures to _\_dom_
 
