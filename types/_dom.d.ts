@@ -1,21 +1,22 @@
-import { DomParamsType, RRecord } from "./core/types";
 import { DomBaseModule } from "./core/DomBaseModule";
+import { CssVarsType, DomParamsType, RRecord } from "./core/types";
 import { DomChildType, DomModelClassType } from "./core/DomModel";
+import { LoadMediaProgress } from "./core/DomUtils";
 import { Cookie } from "./tools/Cookie";
 import { DomStore } from "./tools/DomStore";
-export * from "./core/types";
+export * from "./core/DomAttributesObserver";
 export * from "./core/DomCore";
 export * from "./core/DomCss";
-export * from "./core/DomModel";
-export * from "./core/DomAttributesObserver";
 export * from "./core/DomLifeObserver";
-export * from "./tools/DataList";
-export * from "./tools/DomStore";
-export * from "./tools/Listener";
-export * from "./tools/EventBuffer";
+export * from "./core/DomModel";
+export * from "./core/types";
 export * from "./tools/Classes";
-export * from "./tools/DomRouter";
+export * from "./tools/DataList";
 export * from "./tools/DomLang";
+export * from "./tools/DomRouter";
+export * from "./tools/DomStore";
+export * from "./tools/EventBuffer";
+export * from "./tools/Listener";
 export * from "./tools/Player";
 /**
  * Create an HTMLElement
@@ -49,15 +50,21 @@ export interface _domType {
         rules: Record<string, CSSStyleRule>;
     };
     getAttributes: (target: HTMLElement) => Record<string, any>;
-    loadImage: (src: string) => Promise<HTMLImageElement>;
+    loadMediaUri: (src: string, onProgress?: (p: LoadMediaProgress) => void) => Promise<string>;
+    loadImage: (src: string, onProgress?: (p: LoadMediaProgress) => void) => Promise<HTMLImageElement>;
     img2canvas: (img: HTMLImageElement) => HTMLCanvasElement;
     loadCanvas: (src: string) => Promise<HTMLCanvasElement>;
+    getParentPile: (dom: HTMLElement, condition: (dom: Element) => boolean | void, maxDeep?: number) => HTMLElement[] | null;
+    findParent: (dom: HTMLElement, condition: (dom: Element) => boolean | void, maxDeep?: number) => HTMLElement | null;
     download: (fileName: string, src: String | HTMLImageElement | File | Blob | {
         toDataURL: Function;
         [k: string]: any;
     }) => void;
     downloadFile: (src: File) => void;
     higherZindex: (parent: HTMLElement) => number;
+    handleCssVars: (root?: string, cssVars?: {
+        [k: string]: string;
+    }, sheet?: CSSStyleSheet) => CssVarsType;
 }
 export declare class DomModule extends DomBaseModule {
     constructor();

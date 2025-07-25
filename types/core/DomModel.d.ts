@@ -1,6 +1,6 @@
-import { CssVarsType, DomRulesType, DomRulesDataType } from "./types";
-import { ListenerEvent } from "../tools/Listener";
 import { DomModule } from "../_dom";
+import { ListenerEvent } from "../tools/Listener";
+import { CssVarsType, DomRulesDataType, DomRulesType } from "./types";
 export type DomModelClassType = (new (...args: any[]) => DomModel) & Pick<typeof DomModel, keyof typeof DomModel>;
 export type HTMLChildType = string | Text | HTMLElement;
 export type DomChildType = HTMLChildType | DomModel;
@@ -46,10 +46,10 @@ export declare class DomModel<T extends HTMLElement = HTMLElement> {
     onInput(name: string, callback: (evt: ListenerEvent<string, any>) => any): void;
     _domOn(type: string, callback: (evt: ListenerEvent<string, any>) => any): void;
     _domOnceBuilt(callback: (evt?: ListenerEvent<string, any>) => any): void;
-    _domOnInit(params?: Record<string, any>, children?: Array<DomChildType>): void;
-    _domOnAfterInit(params?: Record<string, any>, children?: Array<DomChildType>): void;
-    _domOnAttributeChange(name: string, value: any, oldValue: any): void;
-    _domOnReady(): void;
-    _domOnDestroy(): void;
-    _domOnBuild(params?: Record<string, any>, children?: Array<DomChildType>): HTMLElement | Array<DomChildType>;
+    _domOnInit(params?: Record<string, any>, children?: Array<DomChildType>): Promise<unknown> | void;
+    _domOnAfterInit(params?: Record<string, any>, children?: Array<DomChildType>): Promise<unknown> | void;
+    _domOnAttributeChange(name: string, value: any, oldValue: any): Promise<unknown> | void;
+    _domOnReady(): Promise<unknown> | void;
+    _domOnDestroy(): Promise<unknown> | void;
+    _domOnBuild(params?: Record<string, any>, children?: Array<DomChildType>): HTMLElement | Array<DomChildType> | Promise<HTMLElement> | Promise<Array<DomChildType>>;
 }
