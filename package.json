@@ -10,6 +10,10 @@
 		"doc": "npx typedoc src/index.ts && node ./toolz/docFix.cjs",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/yorgsite/_dom.3.git"
+	},
 	"keywords": [
 		"web",
 		"html",
