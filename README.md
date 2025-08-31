@@ -6,7 +6,7 @@ v3.\*
 
 **\_dom.js** is focused on html and css creation.
 
-*   Ultra light : \< 50k 
+*   Ultra light : \< 60k or 121k unminified
 *   Easy creation of [html](#tg_html) elements and [css](#tg_css) rules.
 *   Use sass like syntax to optimise your css [rules](#_dom.rules).
 *   Interacts exclusively with native browser methods.

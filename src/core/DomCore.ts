@@ -1,8 +1,8 @@
 import { DomBaseModule } from "./DomBaseModule";
-// import { DomLibraries } from "./DomLibraries";
+import { DomLibraries } from "./DomLibraries";
 // import { DomModel, DomModelInstance } from "./DomModel";
-import { DomChildType, DomModel } from "./DomModel";
-import { DomParamsType } from "./types";
+import { DomModel } from "./model/DomModel";
+import { DomChildType, DomParamsType } from "./types";
 
 // type ValueOf<Obj> = Obj[keyof Obj];
 // type OneOnly<Obj, Key extends keyof Obj> = { [key in Exclude<keyof Obj, Key>]: null } & Pick<Obj, Key>;
@@ -12,7 +12,7 @@ import { DomParamsType } from "./types";
 export class DomCore {
 	private static _uidDate = 0;
 	private static _uidCnt = 0;
-	// private static libraries = new DomLibraries();
+	private static libraries = new DomLibraries();
 	static get uid(): string {
 		const d = Date.now();
 		if (d === this._uidDate) {

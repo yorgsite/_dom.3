@@ -18,4 +18,5 @@ export declare class DomUtils {
     static getParentPile(dom: HTMLElement, condition: (dom: Element) => boolean | void, maxDeep?: number): HTMLElement[] | null;
     static findParent(dom: HTMLElement, condition: (dom: Element) => boolean | void, maxDeep?: number): HTMLElement | null;
     static getAttributes(target: HTMLElement): Record<string, any>;
+    static getScrollBarWidth(force?: boolean): number;
 }

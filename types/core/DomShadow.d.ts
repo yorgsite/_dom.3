@@ -1,4 +1,4 @@
-import { DomModel } from "./DomModel";
+import { DomModel } from "./model/DomModel";
 export declare class DomShadow {
     static models: Map<any, any>;
     constructor(scope: HTMLElement, model: DomModel);

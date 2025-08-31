@@ -1,3 +1,3 @@
 
 
-module.exports = require('./dist/_dom.common.js');
+module.exports = require('./dist/_dom.common.min.js');

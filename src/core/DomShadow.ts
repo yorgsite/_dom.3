@@ -1,6 +1,6 @@
 import { DomCore } from "./DomCore";
-import { DomModel } from "./DomModel";
 import { DomUtils } from "./DomUtils";
+import { DomModel } from "./model/DomModel";
 
 export class DomShadow {
 	static models = new Map();

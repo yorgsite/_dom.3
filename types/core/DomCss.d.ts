@@ -48,13 +48,28 @@ export declare class DomCss {
     /**
      * Handle css variables
      * @param root css root query
-     * @param cssVars default css vars values
+     * @param cssVars default css vars values (not applied if allready exist)
      * @param sheet target css styleSheet
      * @returns a proxy for the css vars values
      */
     static handleVars(root?: string, cssVars?: {
         [k: string]: string;
     }, sheet?: CSSStyleSheet): CssVarsType;
+    /**
+     * Finds a css rule in any available stylesheet.
+     * The last rule found is returned for a same selector.
+     * @param selector the selector of the rule
+     * @param sheet search only in this styleSheet when provided
+     * @returns the css rule or null if not found.
+     */
+    static findRule(selector: string, sheet?: CSSStyleSheet): CSSStyleRule | null;
+    /**
+     * Finds all css rules corresponding to the selector
+     * @param selector the selector of the rule.
+     * @param sheet search only in this styleSheet when provided
+     * @returns the list of rules found.
+     */
+    static findRules(selector: string, sheet?: CSSStyleSheet): CSSStyleRule[];
     /**
      * Transforms sass like data to css like data.
      * @param data sass like structured object

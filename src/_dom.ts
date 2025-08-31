@@ -2,18 +2,26 @@ import { Classes } from "./_dom";
 import { DomBaseModule } from "./core/DomBaseModule";
 import { DomCore } from "./core/DomCore";
 import { DomCss } from "./core/DomCss";
-import { CssVarsType, DomParamsType, DomRulesDataType, RRecord } from "./core/types";
+import {
+	CssVarsType,
+	DomChildType,
+	DomModelClassType,
+	DomParamsType,
+	DomRulesDataType,
+	RRecord,
+} from "./core/types";
 
-import { DomChildType, DomModel, DomModelClassType } from "./core/DomModel";
 import { DomUtils, LoadMediaProgress } from "./core/DomUtils";
+import { DomModel } from "./core/model/DomModel";
 import { Cookie } from "./tools/Cookie";
 import { DomStore } from "./tools/DomStore";
 
-export * from "./core/DomAttributesObserver";
 export * from "./core/DomCore";
 export * from "./core/DomCss";
-export * from "./core/DomLifeObserver";
-export * from "./core/DomModel";
+export * from "./core/DomUtils";
+export * from "./core/model/DomModel";
+export * from "./core/observers/DomAttributesObserver";
+export * from "./core/observers/DomLifeObserver";
 export * from "./core/types";
 export * from "./tools/Classes";
 export * from "./tools/DataList";

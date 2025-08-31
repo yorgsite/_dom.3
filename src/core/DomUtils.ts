@@ -1,22 +1,5 @@
 import { DomCore } from "./DomCore";
 
-// class Prom<T> extends Promise<T> {
-// 	private __onprogress?: (value: number, total: number) => void = () => {};
-// 	constructor(
-// 		executor: (
-// 			resolve: (value: T | PromiseLike<T>) => void,
-// 			reject: (reason?: any) => void,
-// 			progress: (value: number, total: number) => void
-// 		) => void
-// 	) {
-// 		super((res, rej) => executor(res, rej, (t,v)=>this.__onprogress(t,v)));
-// 	}
-// 	progress(onprogress?: (value: number, total: number) => void): Prom<T> {
-// 		this.__onprogress = onprogress;
-// 		return this;
-// 	}
-// }
-
 export class LoadMediaProgress {
 	constructor(
 		public url: string,
@@ -25,6 +8,13 @@ export class LoadMediaProgress {
 		public percent: number = 0
 	) {}
 }
+
+const closures: {
+	scrollBarWidth: number;
+} = {
+	scrollBarWidth: -1,
+};
+
 // btoa(Array.from(new Uint8Array(arraybuffer)).map(b => String.fromCharCode(b)).join(''))
 export class DomUtils {
 	static loadMediaUri(
@@ -42,7 +32,6 @@ export class DomUtils {
 			};
 			xmlHTTP.onprogress = function (e) {
 				progress.loaded = e.loaded;
-				progress.total = e.total;
 				progress.total = e.total;
 				progress.percent = e.loaded / e.total;
 				onProgress(progress);
@@ -182,6 +171,18 @@ export class DomUtils {
 		}
 		return result;
 	}
+
+	static getScrollBarWidth(force = false) {
+		if (!force && closures.scrollBarWidth !== -1) return closures.scrollBarWidth;
+		let el = document.createElement("div");
+		el.style.cssText = "overflow:scroll; visibility:hidden; position:absolute;";
+		document.body.appendChild(el);
+		let width = el.offsetWidth - el.clientWidth;
+		el.remove();
+		document.documentElement.style.setProperty("--scrollbar-width", width + "px");
+		return (closures.scrollBarWidth = width);
+	}
+
 	// static objName2tagName(objName){
 	// 	return objName.split(/([A-Z])/).map((v,i)=>i%2?'-'+v.toLowerCase():v).join('');
 	// }

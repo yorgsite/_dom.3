@@ -7,7 +7,37 @@ import {
 	RRecord,
 } from "./types";
 
-// export type RulesData = {rules:Record<string,Record<string,string|number>>,alias:RRecord<string|number>};
+class DomCssVars extends Proxy<any> {
+	constructor(root?: string, cssVars?: { [k: string]: string }, sheet?: CSSStyleSheet) {
+		super(
+			{},
+			{
+				get: (tgt, prop: string) =>
+					prop === "setVars"
+						? (vars: { [k: string]: string }) =>
+								Object.entries(vars).forEach(([k, v]) => (this[k] = v))
+						: rule.style.getPropertyValue("--" + prop),
+				set: (tgt, prop: string, val) => {
+					rule.style.setProperty("--" + prop, val);
+					return true;
+				},
+			}
+		);
+		let rule = this.findRule(root, sheet);
+		if (!rule) {
+			const sheet = this.sheet;
+			const ruleId = sheet.cssRules.length;
+			sheet.insertRule(root + "{\n\n}", ruleId);
+			rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+		}
+		if (cssVars) {
+			Object.entries(cssVars).forEach(([k, v]) => {
+				if (!this[k]) this[k] = v;
+			});
+		}
+	}
+}
+
 export class DomCss {
 	private static defaultCssRef = new Map<string, Map<string, string>>();
 	private static flatSelectors = ["@font-face"];
@@ -213,7 +243,7 @@ export class DomCss {
 	/**
 	 * Handle css variables
 	 * @param root css root query
-	 * @param cssVars default css vars values
+	 * @param cssVars default css vars values (not applied if allready exist)
 	 * @param sheet target css styleSheet
 	 * @returns a proxy for the css vars values
 	 */
@@ -223,10 +253,14 @@ export class DomCss {
 		sheet?: CSSStyleSheet
 	): CssVarsType {
 		if (!root) root = ":root";
-		if (!(sheet instanceof CSSStyleSheet)) sheet = this.sheet;
-		const ruleId = sheet.cssRules.length;
-		sheet.insertRule(root + "{\n\n}", ruleId);
-		const rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+
+		let rule = this.findRule(root, sheet);
+		if (!rule) {
+			const sheet = this.sheet;
+			const ruleId = sheet.cssRules.length;
+			sheet.insertRule(root + "{\n\n}", ruleId);
+			rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+		}
 		const proxy = new Proxy(
 			{},
 			{
@@ -244,11 +278,37 @@ export class DomCss {
 
 		if (cssVars) {
 			Object.entries(cssVars).forEach(([k, v]) => {
-				proxy[k] = v;
+				if (!proxy[k]) proxy[k] = v;
 			});
 		}
 
 		return proxy;
+	}
+
+	/**
+	 * Finds a css rule in any available stylesheet.
+	 * The last rule found is returned for a same selector.
+	 * @param selector the selector of the rule
+	 * @param sheet search only in this styleSheet when provided
+	 * @returns the css rule or null if not found.
+	 */
+	static findRule(selector: string, sheet?: CSSStyleSheet): CSSStyleRule | null {
+		const rules = this.findRules(selector, sheet);
+		return rules.length ? rules[rules.length - 1] : null;
+	}
+
+	/**
+	 * Finds all css rules corresponding to the selector
+	 * @param selector the selector of the rule.
+	 * @param sheet search only in this styleSheet when provided
+	 * @returns the list of rules found.
+	 */
+	static findRules(selector: string, sheet?: CSSStyleSheet): CSSStyleRule[] {
+		return (sheet ? [sheet] : Array.from(document.styleSheets)).flatMap(sheet => {
+			return Array.from(sheet.cssRules).filter(
+				(rule: CSSStyleRule) => rule.selectorText === selector
+			);
+		}) as CSSStyleRule[];
 	}
 
 	/**
@@ -271,7 +331,9 @@ export class DomCss {
 				let c = prop.charAt(0);
 				if (c === "$") {
 					// vars
-					vars[prop.slice(1)] = dat[prop];
+					const propReg = prop.replace(/([$])/, "\\$1") + "(?![\\w-])";
+					// prepare regexp replacement as var key
+					vars[propReg] = dat[prop];
 				} else if (DomCss.flatSelectors.includes(prop)) {
 					res.rules[prop] = dat[prop];
 				} else if (c === "@") {
@@ -297,7 +359,8 @@ export class DomCss {
 				} else {
 					let tmp = dat[prop] + "";
 					Object.keys(vars).forEach(k => {
-						tmp = tmp.indexOf(k) > -1 ? tmp.split(k).join(vars[k]) : tmp;
+						// tmp = tmp.indexOf(k) > -1 ? tmp.split(k).join(vars[k]) : tmp;
+						tmp = tmp.replace(new RegExp(k), vars[k]);
 					});
 					obj[prop] = tmp;
 				}
@@ -310,6 +373,7 @@ export class DomCss {
 			}
 		};
 		collect(data, {}, [], res);
+
 		return res;
 	}
 

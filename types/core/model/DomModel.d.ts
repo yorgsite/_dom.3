@@ -1,19 +1,5 @@
-import { ListenerEvent } from "../tools/Listener";
-import { CssVarsType, DomRulesDataType, DomRulesType } from "./types";
-export type DomModelClassType = (new (...args: any[]) => DomModel) & Pick<typeof DomModel, keyof typeof DomModel>;
-export type HTMLChildType = string | Text | HTMLElement;
-export type DomChildType = HTMLChildType | DomModel;
-export declare class DomModelStatic {
-    private readonly model;
-    static register<TData extends Record<string, any> = Record<string, any>>(instance: DomModel, _inputs?: TData, _children?: Array<DomChildType>): void;
-    static get(instance: DomModel): DomModelStatic;
-    rules: DomRulesType;
-    cssVars: CssVarsType | undefined;
-    constructor(model: DomModelClassType);
-    init(): void;
-    initTagName(): void;
-    initRules(): void;
-}
+import { ListenerEvent } from "../../tools/Listener";
+import { CssVarsType, DomChildType, DomModelClassType, DomRulesDataType, DomRulesType } from "../types";
 export declare class DomModel<TData extends Record<string, any> = Record<string, any>> {
     static tagName: string;
     static className: string;
@@ -28,7 +14,7 @@ export declare class DomModel<TData extends Record<string, any> = Record<string,
         [k: string]: string;
     };
     get shadowRules(): boolean;
-    get inputs(): object;
+    get inputs(): TData;
     clone(): DomModel<Record<string, any>>;
     connect(): void;
     disconnect(): void;
