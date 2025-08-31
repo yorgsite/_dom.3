@@ -438,21 +438,6 @@ exports.DomCore = DomCore;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -465,43 +450,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DomCss = void 0;
 var DomCore_1 = __webpack_require__(573);
-var DomCssVars = /** @class */ (function (_super) {
-    __extends(DomCssVars, _super);
-    function DomCssVars(root, cssVars, sheet) {
-        var _this = _super.call(this, {}, {
-            get: function (tgt, prop) {
-                return prop === "setVars"
-                    ? function (vars) {
-                        return Object.entries(vars).forEach(function (_a) {
-                            var k = _a[0], v = _a[1];
-                            return (_this[k] = v);
-                        });
-                    }
-                    : rule.style.getPropertyValue("--" + prop);
-            },
-            set: function (tgt, prop, val) {
-                rule.style.setProperty("--" + prop, val);
-                return true;
-            },
-        }) || this;
-        var rule = _this.findRule(root, sheet);
-        if (!rule) {
-            var sheet_1 = _this.sheet;
-            var ruleId = sheet_1.cssRules.length;
-            sheet_1.insertRule(root + "{\n\n}", ruleId);
-            rule = sheet_1.cssRules[sheet_1.cssRules.length - 1];
-        }
-        if (cssVars) {
-            Object.entries(cssVars).forEach(function (_a) {
-                var k = _a[0], v = _a[1];
-                if (!_this[k])
-                    _this[k] = v;
-            });
-        }
-        return _this;
-    }
-    return DomCssVars;
-}(Proxy));
 var DomCss = /** @class */ (function () {
     function DomCss() {
     }
@@ -702,10 +650,10 @@ var DomCss = /** @class */ (function () {
             root = ":root";
         var rule = this.findRule(root, sheet);
         if (!rule) {
-            var sheet_2 = this.sheet;
-            var ruleId = sheet_2.cssRules.length;
-            sheet_2.insertRule(root + "{\n\n}", ruleId);
-            rule = sheet_2.cssRules[sheet_2.cssRules.length - 1];
+            var sheet_1 = this.sheet;
+            var ruleId = sheet_1.cssRules.length;
+            sheet_1.insertRule(root + "{\n\n}", ruleId);
+            rule = sheet_1.cssRules[sheet_1.cssRules.length - 1];
         }
         var proxy = new Proxy({}, {
             get: function (tgt, prop) {
@@ -876,22 +824,6 @@ exports.DomLibrary = DomLibrary;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DomUtils = exports.LoadMediaProgress = void 0;
 var DomCore_1 = __webpack_require__(573);
-// class Prom<T> extends Promise<T> {
-// 	private __onprogress?: (value: number, total: number) => void = () => {};
-// 	constructor(
-// 		executor: (
-// 			resolve: (value: T | PromiseLike<T>) => void,
-// 			reject: (reason?: any) => void,
-// 			progress: (value: number, total: number) => void
-// 		) => void
-// 	) {
-// 		super((res, rej) => executor(res, rej, (t,v)=>this.__onprogress(t,v)));
-// 	}
-// 	progress(onprogress?: (value: number, total: number) => void): Prom<T> {
-// 		this.__onprogress = onprogress;
-// 		return this;
-// 	}
-// }
 var LoadMediaProgress = /** @class */ (function () {
     function LoadMediaProgress(url, loaded, total, percent) {
         if (loaded === void 0) { loaded = 0; }

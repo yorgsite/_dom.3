@@ -7,37 +7,6 @@ import {
 	RRecord,
 } from "./types";
 
-class DomCssVars extends Proxy<any> {
-	constructor(root?: string, cssVars?: { [k: string]: string }, sheet?: CSSStyleSheet) {
-		super(
-			{},
-			{
-				get: (tgt, prop: string) =>
-					prop === "setVars"
-						? (vars: { [k: string]: string }) =>
-								Object.entries(vars).forEach(([k, v]) => (this[k] = v))
-						: rule.style.getPropertyValue("--" + prop),
-				set: (tgt, prop: string, val) => {
-					rule.style.setProperty("--" + prop, val);
-					return true;
-				},
-			}
-		);
-		let rule = this.findRule(root, sheet);
-		if (!rule) {
-			const sheet = this.sheet;
-			const ruleId = sheet.cssRules.length;
-			sheet.insertRule(root + "{\n\n}", ruleId);
-			rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
-		}
-		if (cssVars) {
-			Object.entries(cssVars).forEach(([k, v]) => {
-				if (!this[k]) this[k] = v;
-			});
-		}
-	}
-}
-
 export class DomCss {
 	private static defaultCssRef = new Map<string, Map<string, string>>();
 	private static flatSelectors = ["@font-face"];
