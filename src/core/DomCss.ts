@@ -7,6 +7,85 @@ import {
 	RRecord,
 } from "./types";
 
+export class CssVars {
+	private rule: CSSStyleRule;
+	private _proxy: CssVarsType;
+	constructor(
+		public readonly root: string = ":root",
+		public camelised: boolean = false,
+		sheet?: CSSStyleSheet
+	) {
+		let rule = DomCss.findRule(root, sheet);
+		if (!rule) {
+			const sheet = DomCss.sheet;
+			const ruleId = sheet.cssRules.length;
+			sheet.insertRule(root + "{\n\n}", ruleId);
+			rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+		}
+		this.rule = rule;
+	}
+	get proxy() {
+		if (!this._proxy) {
+			this._proxy = new Proxy(
+				{},
+				{
+					get: (tgt, prop: string) => {
+						switch (prop) {
+							case "getVars":
+								return this.getVars;
+							case "setVars":
+								return this.setVars;
+							default:
+								return this.get(prop);
+						}
+					},
+					set: (tgt, prop: string, val) => {
+						this.set(prop, val);
+						return true;
+					},
+				}
+			) as CssVarsType;
+		}
+		return this._proxy;
+	}
+	uncamelise(key: string): string {
+		return key.replace(/[-]+([\w])/g, s => s.toUpperCase());
+	}
+	camelise(key: string): string {
+		return key.replace(/[A-Z]/g, s => "-" + s.toLowerCase());
+	}
+	has(key: string): boolean {
+		return !!this.get(key);
+	}
+	get(key: string): string {
+		if (this.camelised) key = this.uncamelise(key);
+		return this.rule.style.getPropertyValue("--" + key);
+	}
+	set(key: string, value: string) {
+		if (this.camelised) key = this.uncamelise(key);
+		this.rule.style.setProperty("--" + key, value);
+	}
+	keys = (): string[] => {
+		let keys: string[] = [];
+		for (let i = 0; i < this.rule.style.length; i++) {
+			keys.push(this.rule.style.item(i));
+		}
+		keys = keys.filter(k => k.slice(0, 2) === "--").map(k => k.slice(2));
+		return this.camelised ? keys.map(k => this.camelise(k)) : keys;
+	};
+	entries = (): [string, string][] => {
+		return this.keys().map(k => [k, this.get(k)]);
+	};
+	getVars = (): { [k: string]: string } => {
+		return Object.fromEntries(this.entries());
+	};
+	setVars = (vars: { [k: string]: string }, keepDefault = false) => {
+		Object.entries(vars)
+			.filter(([k, v]) => !keepDefault || !this.has(k))
+			.forEach(([k, v]) => this.set(k, v));
+	};
+}
+
 export class DomCss {
 	private static defaultCssRef = new Map<string, Map<string, string>>();
 	private static flatSelectors = ["@font-face"];
@@ -221,37 +300,40 @@ export class DomCss {
 		cssVars?: { [k: string]: string },
 		sheet?: CSSStyleSheet
 	): CssVarsType {
-		if (!root) root = ":root";
+		const cv = new CssVars(root, false, sheet);
+		if (cssVars) cv.setVars(cssVars, true);
+		return cv.proxy;
+		// if (!root) root = ":root";
 
-		let rule = this.findRule(root, sheet);
-		if (!rule) {
-			const sheet = this.sheet;
-			const ruleId = sheet.cssRules.length;
-			sheet.insertRule(root + "{\n\n}", ruleId);
-			rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
-		}
-		const proxy = new Proxy(
-			{},
-			{
-				get: (tgt, prop: string) =>
-					prop === "setVars"
-						? (vars: { [k: string]: string }) =>
-								Object.entries(vars).forEach(([k, v]) => (proxy[k] = v))
-						: rule.style.getPropertyValue("--" + prop),
-				set: (tgt, prop: string, val) => {
-					rule.style.setProperty("--" + prop, val);
-					return true;
-				},
-			}
-		) as CssVarsType;
+		// let rule = this.findRule(root, sheet);
+		// if (!rule) {
+		// 	const sheet = this.sheet;
+		// 	const ruleId = sheet.cssRules.length;
+		// 	sheet.insertRule(root + "{\n\n}", ruleId);
+		// 	rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+		// }
+		// const proxy = new Proxy(
+		// 	{},
+		// 	{
+		// 		get: (tgt, prop: string) =>
+		// 			prop === "setVars"
+		// 				? (vars: { [k: string]: string }) =>
+		// 						Object.entries(vars).forEach(([k, v]) => (proxy[k] = v))
+		// 				: rule.style.getPropertyValue("--" + prop),
+		// 		set: (tgt, prop: string, val) => {
+		// 			rule.style.setProperty("--" + prop, val);
+		// 			return true;
+		// 		},
+		// 	}
+		// ) as CssVarsType;
 
-		if (cssVars) {
-			Object.entries(cssVars).forEach(([k, v]) => {
-				if (!proxy[k]) proxy[k] = v;
-			});
-		}
+		// if (cssVars) {
+		// 	Object.entries(cssVars).forEach(([k, v]) => {
+		// 		if (!proxy[k]) proxy[k] = v;
+		// 	});
+		// }
 
-		return proxy;
+		// return proxy;
 	}
 
 	/**

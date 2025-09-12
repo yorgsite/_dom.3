@@ -21,7 +21,7 @@ export type DomRulesRulesResultType = {
 };
 
 export type CssVarsType = { [k: string]: string } & {
-	setVars?: (vars: { [k: string]: string }) => void;
+	setVars?: (vars: { [k: string]: string }, keepDefault?: boolean) => void;
 };
 
 export type DomModelClassType = (new (...args: any[]) => DomModel) &

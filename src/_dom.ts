@@ -18,6 +18,7 @@ import { DomStore } from "./tools/DomStore";
 
 export * from "./core/DomCore";
 export * from "./core/DomCss";
+export * from "./core/DomSignals";
 export * from "./core/DomUtils";
 export * from "./core/model/DomModel";
 export * from "./core/observers/DomAttributesObserver";
