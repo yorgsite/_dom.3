@@ -47,6 +47,7 @@ var DomModel_1 = __webpack_require__(815);
 var Cookie_1 = __webpack_require__(36);
 __exportStar(__webpack_require__(573), exports);
 __exportStar(__webpack_require__(971), exports);
+__exportStar(__webpack_require__(125), exports);
 __exportStar(__webpack_require__(657), exports);
 __exportStar(__webpack_require__(815), exports);
 __exportStar(__webpack_require__(689), exports);
@@ -448,8 +449,98 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DomCss = void 0;
+exports.DomCss = exports.CssVars = void 0;
 var DomCore_1 = __webpack_require__(573);
+var CssVars = /** @class */ (function () {
+    function CssVars(root, camelised, sheet) {
+        if (root === void 0) { root = ":root"; }
+        if (camelised === void 0) { camelised = false; }
+        var _this = this;
+        this.root = root;
+        this.camelised = camelised;
+        this.keys = function () {
+            var keys = [];
+            for (var i = 0; i < _this.rule.style.length; i++) {
+                keys.push(_this.rule.style.item(i));
+            }
+            keys = keys.filter(function (k) { return k.slice(0, 2) === "--"; }).map(function (k) { return k.slice(2); });
+            return _this.camelised ? keys.map(function (k) { return _this.camelise(k); }) : keys;
+        };
+        this.entries = function () {
+            return _this.keys().map(function (k) { return [k, _this.get(k)]; });
+        };
+        this.getVars = function () {
+            return Object.fromEntries(_this.entries());
+        };
+        this.setVars = function (vars, keepDefault) {
+            if (keepDefault === void 0) { keepDefault = false; }
+            Object.entries(vars)
+                .filter(function (_a) {
+                var k = _a[0], v = _a[1];
+                return !keepDefault || !_this.has(k);
+            })
+                .forEach(function (_a) {
+                var k = _a[0], v = _a[1];
+                return _this.set(k, v);
+            });
+        };
+        var rule = DomCss.findRule(root, sheet);
+        if (!rule) {
+            var sheet_1 = DomCss.sheet;
+            var ruleId = sheet_1.cssRules.length;
+            sheet_1.insertRule(root + "{\n\n}", ruleId);
+            rule = sheet_1.cssRules[sheet_1.cssRules.length - 1];
+        }
+        this.rule = rule;
+    }
+    Object.defineProperty(CssVars.prototype, "proxy", {
+        get: function () {
+            var _this = this;
+            if (!this._proxy) {
+                this._proxy = new Proxy({}, {
+                    get: function (tgt, prop) {
+                        switch (prop) {
+                            case "getVars":
+                                return _this.getVars;
+                            case "setVars":
+                                return _this.setVars;
+                            default:
+                                return _this.get(prop);
+                        }
+                    },
+                    set: function (tgt, prop, val) {
+                        _this.set(prop, val);
+                        return true;
+                    },
+                });
+            }
+            return this._proxy;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    CssVars.prototype.uncamelise = function (key) {
+        return key.replace(/[-]+([\w])/g, function (s) { return s.toUpperCase(); });
+    };
+    CssVars.prototype.camelise = function (key) {
+        return key.replace(/[A-Z]/g, function (s) { return "-" + s.toLowerCase(); });
+    };
+    CssVars.prototype.has = function (key) {
+        return !!this.get(key);
+    };
+    CssVars.prototype.get = function (key) {
+        if (this.camelised)
+            key = this.uncamelise(key);
+        return this.rule.style.getPropertyValue("--" + key);
+    };
+    CssVars.prototype.set = function (key, value) {
+        if (this.camelised)
+            key = this.uncamelise(key);
+        this.rule.style.setProperty("--" + key, value);
+    };
+    return CssVars;
+}());
+exports.CssVars = CssVars;
 var DomCss = /** @class */ (function () {
     function DomCss() {
     }
@@ -646,39 +737,38 @@ var DomCss = /** @class */ (function () {
      * @returns a proxy for the css vars values
      */
     DomCss.handleVars = function (root, cssVars, sheet) {
-        if (!root)
-            root = ":root";
-        var rule = this.findRule(root, sheet);
-        if (!rule) {
-            var sheet_1 = this.sheet;
-            var ruleId = sheet_1.cssRules.length;
-            sheet_1.insertRule(root + "{\n\n}", ruleId);
-            rule = sheet_1.cssRules[sheet_1.cssRules.length - 1];
-        }
-        var proxy = new Proxy({}, {
-            get: function (tgt, prop) {
-                return prop === "setVars"
-                    ? function (vars) {
-                        return Object.entries(vars).forEach(function (_a) {
-                            var k = _a[0], v = _a[1];
-                            return (proxy[k] = v);
-                        });
-                    }
-                    : rule.style.getPropertyValue("--" + prop);
-            },
-            set: function (tgt, prop, val) {
-                rule.style.setProperty("--" + prop, val);
-                return true;
-            },
-        });
-        if (cssVars) {
-            Object.entries(cssVars).forEach(function (_a) {
-                var k = _a[0], v = _a[1];
-                if (!proxy[k])
-                    proxy[k] = v;
-            });
-        }
-        return proxy;
+        var cv = new CssVars(root, false, sheet);
+        if (cssVars)
+            cv.setVars(cssVars, true);
+        return cv.proxy;
+        // if (!root) root = ":root";
+        // let rule = this.findRule(root, sheet);
+        // if (!rule) {
+        // 	const sheet = this.sheet;
+        // 	const ruleId = sheet.cssRules.length;
+        // 	sheet.insertRule(root + "{\n\n}", ruleId);
+        // 	rule = sheet.cssRules[sheet.cssRules.length - 1] as CSSStyleRule;
+        // }
+        // const proxy = new Proxy(
+        // 	{},
+        // 	{
+        // 		get: (tgt, prop: string) =>
+        // 			prop === "setVars"
+        // 				? (vars: { [k: string]: string }) =>
+        // 						Object.entries(vars).forEach(([k, v]) => (proxy[k] = v))
+        // 				: rule.style.getPropertyValue("--" + prop),
+        // 		set: (tgt, prop: string, val) => {
+        // 			rule.style.setProperty("--" + prop, val);
+        // 			return true;
+        // 		},
+        // 	}
+        // ) as CssVarsType;
+        // if (cssVars) {
+        // 	Object.entries(cssVars).forEach(([k, v]) => {
+        // 		if (!proxy[k]) proxy[k] = v;
+        // 	});
+        // }
+        // return proxy;
     };
     /**
      * Finds a css rule in any available stylesheet.
@@ -813,6 +903,131 @@ exports.DomLibrary = DomLibrary;
 // 						onload: (evt: { target: HTMLImageElement }) => resolve(evt.target),
 // 						onerror: (error: Error) => reject(error),
 // 					});
+
+
+/***/ }),
+
+/***/ 125:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.computed = exports.effect = exports.signal = exports.MemberSignal = void 0;
+var DomSignals = /** @class */ (function () {
+    function DomSignals() {
+    }
+    DomSignals.callEffect = function (cb) {
+        var _this_1 = this;
+        this.pendingEffects.add(cb);
+        if (!this.pendingEffectsId) {
+            this.pendingEffectsId = requestAnimationFrame(function () {
+                var pe2 = Array.from(_this_1.pendingEffects.values());
+                _this_1.pendingEffects.clear();
+                _this_1.pendingEffectsId = 0;
+                pe2.forEach(function (element) {
+                    element();
+                });
+            });
+        }
+    };
+    var _a;
+    _a = DomSignals;
+    DomSignals.currentEffects = [];
+    DomSignals.pendingEffects = new Set();
+    DomSignals.pendingEffectsId = 0;
+    DomSignals.signal = function (value) {
+        var signal = function () {
+            if (_a.currentEffects[0]) {
+                registry.effects.add(_a.currentEffects[0]);
+            }
+            return value;
+        };
+        signal.set = function (v, forceChange) {
+            if (forceChange === void 0) { forceChange = false; }
+            if (v !== value || forceChange) {
+                value = v;
+                registry.effects.forEach(function (e) { return _a.callEffect(e); });
+                registry.listeners.forEach(function (cb) { return cb(v); });
+            }
+        };
+        signal.listen = function (callback) {
+            registry.listeners.push(callback);
+        };
+        var registry = { effects: new Set(), listeners: [] };
+        signal.registry = registry;
+        return signal;
+    };
+    DomSignals.effect = function (callback, signals) {
+        if (signals === void 0) { signals = []; }
+        _a.currentEffects.unshift(callback);
+        signals.forEach(function (s) { return s.registry.effects.add(callback); });
+        callback();
+        _a.currentEffects.shift();
+    };
+    DomSignals.computed = function (callback) {
+        var signal = _a.signal();
+        _a.effect(function () {
+            signal.set(callback());
+        });
+        return signal;
+    };
+    /**
+     * Decorator for class members using signals.
+     * The class must be decorated with .@signals.
+     * The member will behave as a classical member
+     * but will trigger effects from the same context when modified.
+     * @exemple
+     * ```typescript
+     * class MyClass{
+     *   \@MemberSignal//<-- member Decorator
+     *   signal:string;
+     *   constructor(){
+     *     effect(()=>console.log(this.signal));
+     *     setTimeout(()=>this.signal='value');
+     *   }
+     * }
+     * // Is equvalent to
+     * class MyClass{
+     *   signal=signal<string>();
+     *   constructor(){
+     *     effect(()=>console.log(this.signal()));
+     *     setTimeout(()=>this.signal.set('value'));
+     *   }
+     * }
+     * ```
+     * @param target
+     * @returns
+     */
+    DomSignals.MemberSignal = function () {
+        var _this = _a;
+        return function (target, propertyKey) {
+            var values = new WeakMap();
+            var getItem = function (scope) {
+                if (!values.has(scope)) {
+                    values.set(scope, _this.signal());
+                }
+                return values.get(scope);
+            };
+            var getter = function () {
+                return getItem(this)();
+            };
+            var setter = function (newVal) {
+                getItem(this).set(newVal);
+            };
+            Object.defineProperty(target, propertyKey, {
+                get: getter,
+                set: setter,
+                enumerable: true,
+                configurable: true,
+            });
+        };
+    };
+    return DomSignals;
+}());
+exports.MemberSignal = DomSignals.MemberSignal;
+exports.signal = DomSignals.signal;
+exports.effect = DomSignals.effect;
+exports.computed = DomSignals.computed;
 
 
 /***/ }),

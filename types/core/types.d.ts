@@ -29,7 +29,7 @@ export type CssVarsType = {
 } & {
     setVars?: (vars: {
         [k: string]: string;
-    }) => void;
+    }, keepDefault?: boolean) => void;
 };
 export type DomModelClassType = (new (...args: any[]) => DomModel) & Pick<typeof DomModel, keyof typeof DomModel>;
 export type HTMLChildType = string | Text | HTMLElement;

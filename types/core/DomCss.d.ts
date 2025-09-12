@@ -1,4 +1,28 @@
 import { CssVarsType, DomRulesDataType, DomRulesRulesResultType, DomRulesType, RRecord } from "./types";
+export declare class CssVars {
+    readonly root: string;
+    camelised: boolean;
+    private rule;
+    private _proxy;
+    constructor(root?: string, camelised?: boolean, sheet?: CSSStyleSheet);
+    get proxy(): CssVarsType;
+    uncamelise(key: string): string;
+    camelise(key: string): string;
+    has(key: string): boolean;
+    get(key: string): string;
+    set(key: string, value: string): void;
+    keys: () => string[];
+    entries: () => [
+        string,
+        string
+    ][];
+    getVars: () => {
+        [k: string]: string;
+    };
+    setVars: (vars: {
+        [k: string]: string;
+    }, keepDefault?: boolean) => void;
+}
 export declare class DomCss {
     private static defaultCssRef;
     private static flatSelectors;
