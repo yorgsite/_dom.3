@@ -32,7 +32,7 @@
 		"node-styl": "^0.0.6",
 		"ts-loader": "^9.5.1",
 		"tsc-watch": "^6.0.0",
-		"typedoc": "^0.25.1",
+		"typedoc": "^0.28.13",
 		"typescript": "^5.3.3",
 		"webpack": "^5.90.2",
 		"webpack-cli": "^5.1.4"

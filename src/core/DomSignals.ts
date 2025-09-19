@@ -1,71 +1,127 @@
-export interface DomSignalRegistryInterface<T> {
-	effects: Set<() => void>;
-	listeners: ((v: T) => void)[];
+export interface DomSignalRegistredEffectInterface {
+	callback: () => void;
+	registries: Set<DomSignalRegistryInterface<any>>;
 }
-export interface DomSignalInterface<T> {
-	(): T;
+export interface DomSignalRegistryInterface<T> {
+	effects: Set<DomSignalRegistredEffect>;
+}
+export interface DomSignalInterface<T, TR> {
+	(): TR;
 	set(v: T): void;
-	listen: (callback: (v: T) => void) => void;
 	registry: DomSignalRegistryInterface<T>;
 }
 
+const effectHandlers = new WeakMap<DomSignalEffectHandler, DomSignalRegistredEffect>();
+class DomSignalEffectHandler {
+	constructor(register: DomSignalRegistredEffect) {
+		effectHandlers.set(this, register);
+	}
+	destroy() {
+		const regEffect = effectHandlers.get(this);
+		regEffect.alive = false;
+		regEffect.registries.forEach(r => {
+			r.effects.delete(regEffect);
+		});
+		regEffect.registries.clear();
+	}
+}
+class DomSignalRegistredEffect {
+	alive = true;
+	registries = new Set<DomSignalRegistryInterface<any>>();
+	constructor(public callback: () => void | Promise<void>) {}
+}
+
+class DomSignalOptions<T, TR> {
+	equal!: (v1: T, v2: T) => boolean;
+	transform!: (v: T) => TR;
+	constructor(opt?: Partial<DomSignalOptions<T, TR>>) {
+		this.equal = opt?.equal ?? ((v1, v2) => v1 === v2);
+		this.transform = opt?.transform ?? (v => v as unknown as TR);
+	}
+}
+
 class DomSignals {
-	private static currentEffects: (() => void)[] = [];
-	private static pendingEffects: Set<() => void> = new Set();
-	private static pendingEffectsId = 0;
-	private static callEffect(cb: () => void) {
-		this.pendingEffects.add(cb);
+	private currentEffects: DomSignalRegistredEffect[] = [];
+	private pendingEffects: Set<DomSignalRegistredEffect> = new Set();
+	private pendingEffectsId = 0;
+	private callEffect(eff: DomSignalRegistredEffect) {
+		this.pendingEffects.add(eff);
 		if (!this.pendingEffectsId) {
 			this.pendingEffectsId = requestAnimationFrame(() => {
-				const pe2 = Array.from(this.pendingEffects.values());
+				const stack = Array.from(this.pendingEffects.values());
 				this.pendingEffects.clear();
 				this.pendingEffectsId = 0;
-				pe2.forEach(element => {
-					element();
-				});
+				stack.filter(elt => elt.alive).forEach(elt => elt.callback());
 			});
 		}
 	}
-	static signal = <T>(value?: T): DomSignalInterface<T> => {
-		const signal = (): T => {
+	/**
+	 * Creates a signal that will trigger effects when it changes.
+	 * @param value initial value.
+	 * @param opt signal options to test equality and transform result.
+	 * @returns a signal with a 'set' method to change its value.
+	 */
+	public signal = <T, TR = T>(
+		value?: T,
+		opt?: Partial<DomSignalOptions<T, TR>>
+	): DomSignalInterface<T, TR> => {
+		const options = new DomSignalOptions(opt);
+		let returnedValue = options.transform(value);
+		const signal = (): TR => {
 			if (this.currentEffects[0]) {
 				registry.effects.add(this.currentEffects[0]);
+				this.currentEffects[0].registries.add(registry);
 			}
-			return value;
+			return returnedValue;
 		};
 		signal.set = (v: T, forceChange: boolean = false) => {
-			if (v !== value || forceChange) {
+			if (forceChange || !options.equal(v, value)) {
 				value = v;
+				returnedValue = options.transform(value);
 				registry.effects.forEach(e => this.callEffect(e));
-				registry.listeners.forEach(cb => cb(v));
 			}
 		};
-		signal.listen = (callback: (v: T) => void) => {
-			registry.listeners.push(callback);
-		};
 
-		const registry: DomSignalRegistryInterface<T> = { effects: new Set(), listeners: [] };
+		const registry: DomSignalRegistryInterface<T> = { effects: new Set() };
 		signal.registry = registry;
 
 		return signal;
 	};
-	static effect = (callback: () => void, signals: DomSignalInterface<any>[] = []): void => {
-		this.currentEffects.unshift(callback);
-		signals.forEach(s => s.registry.effects.add(callback));
+	/**
+	 * Effect reacting to signal handled in the callback when they changes.
+	 * @param callback callback reacting to handled signals.
+	 * @returns an effect handler with a destroy method to unregister the effect.
+	 * Not necessary in most cases but useful if the effect is used in an element
+	 * that could be destroyed while one of the handled signals would persist.
+	 */
+	public effect = (callback: () => void): DomSignalEffectHandler => {
+		const regEffect = new DomSignalRegistredEffect(callback);
+		this.currentEffects.unshift(regEffect);
 		callback();
 		this.currentEffects.shift();
+		return new DomSignalEffectHandler(regEffect);
 	};
-	static computed = <T>(callback: () => T): DomSignalInterface<T> => {
-		const signal = this.signal<T>();
-		this.effect(() => {
-			signal.set(callback());
-		});
-		return signal;
+	/**
+	 * Readonly signal witch value will change when a signal handled in the callback changes.
+	 * @param callback callback reacting to handled signals.
+	 * @returns a readonly signal with 'destroy' method to unregister the computed effect.
+	 * Not necessary in most cases but useful if the effect is used in an element
+	 * that could be destroyed while one of the handled signals would persist.
+	 */
+	public computed = <T>(
+		callback: () => T | Promise<T>,
+		opt?: Partial<DomSignalOptions<T, T>>
+	): (() => T) => {
+		const signal = this.signal<T>(undefined, opt);
+		const result = () => signal();
+		result.destroy = this.effect(async () => {
+			signal.set(await callback());
+		}).destroy;
+		return result;
 	};
 
 	/**
 	 * Decorator for class members using signals.
-	 * The class must be decorated with .@signals.
 	 * The member will behave as a classical member
 	 * but will trigger effects from the same context when modified.
 	 * @exemple
@@ -90,35 +146,30 @@ class DomSignals {
 	 * @param target
 	 * @returns
 	 */
-	public static MemberSignal = <T>() => {
+	public MemberSignal = <T>() => {
 		const _this = this;
 
 		return function (target: any, propertyKey: string) {
-			const values = new WeakMap<any, DomSignalInterface<T>>();
+			const values = new WeakMap<any, DomSignalInterface<T, T>>();
 			const getItem = function (scope: any) {
 				if (!values.has(scope)) {
 					values.set(scope, _this.signal());
 				}
 				return values.get(scope);
 			};
-			const getter = function () {
-				return getItem(this)();
-			};
-
-			const setter = function (newVal: T) {
-				getItem(this).set(newVal);
-			};
 
 			Object.defineProperty(target, propertyKey, {
-				get: getter,
-				set: setter,
+				get: function () {
+					return getItem(this)();
+				},
+				set: function (newVal: T) {
+					getItem(this).set(newVal);
+				},
 				enumerable: true,
 				configurable: true,
 			});
 		};
 	};
 }
-export const MemberSignal = DomSignals.MemberSignal;
-export const signal = DomSignals.signal;
-export const effect = DomSignals.effect;
-export const computed = DomSignals.computed;
+
+export const { MemberSignal, signal, effect, computed } = new DomSignals();

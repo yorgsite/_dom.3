@@ -1,14 +1,29 @@
-export interface DomSignalRegistryInterface<T> {
-    effects: Set<() => void>;
-    listeners: ((v: T) => void)[];
+export interface DomSignalRegistredEffectInterface {
+    callback: () => void;
+    registries: Set<DomSignalRegistryInterface<any>>;
 }
-export interface DomSignalInterface<T> {
-    (): T;
+export interface DomSignalRegistryInterface<T> {
+    effects: Set<DomSignalRegistredEffect>;
+}
+export interface DomSignalInterface<T, TR> {
+    (): TR;
     set(v: T): void;
-    listen: (callback: (v: T) => void) => void;
     registry: DomSignalRegistryInterface<T>;
 }
-export declare const MemberSignal: <T>() => (target: any, propertyKey: string) => void;
-export declare const signal: <T>(value?: T) => DomSignalInterface<T>;
-export declare const effect: (callback: () => void, signals?: DomSignalInterface<any>[]) => void;
-export declare const computed: <T>(callback: () => T) => DomSignalInterface<T>;
+declare class DomSignalEffectHandler {
+    constructor(register: DomSignalRegistredEffect);
+    destroy(): void;
+}
+declare class DomSignalRegistredEffect {
+    callback: () => void | Promise<void>;
+    alive: boolean;
+    registries: Set<DomSignalRegistryInterface<any>>;
+    constructor(callback: () => void | Promise<void>);
+}
+declare class DomSignalOptions<T, TR> {
+    equal: (v1: T, v2: T) => boolean;
+    transform: (v: T) => TR;
+    constructor(opt?: Partial<DomSignalOptions<T, TR>>);
+}
+export declare const MemberSignal: <T>() => (target: any, propertyKey: string) => void, signal: <T, TR = T>(value?: T, opt?: Partial<DomSignalOptions<T, TR>>) => DomSignalInterface<T, TR>, effect: (callback: () => void) => DomSignalEffectHandler, computed: <T>(callback: () => T | Promise<T>, opt?: Partial<DomSignalOptions<T, T>>) => () => T;
+export {};
