@@ -26,6 +26,7 @@ export * from "./core/observers/DomLifeObserver";
 export * from "./core/types";
 export * from "./tools/Classes";
 export * from "./tools/DataList";
+export * from "./tools/DomHistory";
 export * from "./tools/DomLang";
 export * from "./tools/DomRouter";
 export * from "./tools/DomStore";

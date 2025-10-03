@@ -1,37 +1,9 @@
-export interface DomSignalRegistredEffectInterface {
-	callback: () => void;
-	registries: Set<DomSignalRegistryInterface<any>>;
-}
-export interface DomSignalRegistryInterface<T> {
-	effects: Set<DomSignalRegistredEffect>;
-}
+// ------------ signal
 export interface DomSignalInterface<T, TR> {
 	(): TR;
 	set(v: T): void;
-	registry: DomSignalRegistryInterface<T>;
 }
-
-const effectHandlers = new WeakMap<DomSignalEffectHandler, DomSignalRegistredEffect>();
-class DomSignalEffectHandler {
-	constructor(register: DomSignalRegistredEffect) {
-		effectHandlers.set(this, register);
-	}
-	destroy() {
-		const regEffect = effectHandlers.get(this);
-		regEffect.alive = false;
-		regEffect.registries.forEach(r => {
-			r.effects.delete(regEffect);
-		});
-		regEffect.registries.clear();
-	}
-}
-class DomSignalRegistredEffect {
-	alive = true;
-	registries = new Set<DomSignalRegistryInterface<any>>();
-	constructor(public callback: () => void | Promise<void>) {}
-}
-
-class DomSignalOptions<T, TR> {
+export class DomSignalOptions<T, TR> {
 	equal!: (v1: T, v2: T) => boolean;
 	transform!: (v: T) => TR;
 	constructor(opt?: Partial<DomSignalOptions<T, TR>>) {
@@ -39,22 +11,86 @@ class DomSignalOptions<T, TR> {
 		this.transform = opt?.transform ?? (v => v as unknown as TR);
 	}
 }
+export class DomSignalRegistry<T, TR> {
+	effects: Set<DomSignalRegistredEffect> = new Set();
+	outValue: TR;
+	constructor(
+		private signals: DomSignals,
+		private inValue: T,
+		private options: DomSignalOptions<T, TR>
+	) {
+		this.outValue = options.transform(inValue);
+	}
 
+	get = (): TR => {
+		const currentEffects = this.signals.currentEffects;
+		if (currentEffects[0]) {
+			this.effects.add(currentEffects[0]);
+			currentEffects[0].registries.add(this);
+		}
+		return this.outValue;
+	};
+	set = (v: T, forceChange: boolean = false) => {
+		if (forceChange || !this.options.equal(v, this.inValue)) {
+			this.inValue = v;
+			this.outValue = this.options.transform(this.inValue);
+			this.effects.forEach(this.signals.callEffect);
+		}
+	};
+}
+
+// ------------ effect
+const effectHandlers = new WeakMap<DomSignalEffectHandler, DomSignalRegistredEffect>();
+class DomSignalRegistredEffect {
+	alive = true;
+	registries = new Set<DomSignalRegistry<any, any>>();
+	constructor(public callback: () => void | Promise<void>) {}
+	callEffect(currentEffects: DomSignalRegistredEffect[]) {
+		this.unregister();
+		currentEffects.unshift(this);
+		this.callback();
+		currentEffects.shift();
+	}
+	unregister() {
+		this.registries.forEach(r => {
+			r.effects.delete(this);
+		});
+		this.registries.clear();
+	}
+}
+export class DomSignalEffectHandler {
+	constructor(register: DomSignalRegistredEffect) {
+		effectHandlers.set(this, register);
+	}
+	destroy() {
+		const regEffect = effectHandlers.get(this);
+		regEffect.alive = false;
+		regEffect.unregister();
+	}
+}
+
+// ------------ computed
+export interface DomSignalComputedInterface<T> {
+	(): T;
+	destroy(): void;
+}
+
+// ------------ signals
 class DomSignals {
-	private currentEffects: DomSignalRegistredEffect[] = [];
+	public currentEffects: DomSignalRegistredEffect[] = [];
 	private pendingEffects: Set<DomSignalRegistredEffect> = new Set();
 	private pendingEffectsId = 0;
-	private callEffect(eff: DomSignalRegistredEffect) {
+	public readonly callEffect = (eff: DomSignalRegistredEffect) => {
 		this.pendingEffects.add(eff);
 		if (!this.pendingEffectsId) {
 			this.pendingEffectsId = requestAnimationFrame(() => {
 				const stack = Array.from(this.pendingEffects.values());
 				this.pendingEffects.clear();
 				this.pendingEffectsId = 0;
-				stack.filter(elt => elt.alive).forEach(elt => elt.callback());
+				stack.filter(elt => elt.alive).forEach(elt => elt.callEffect(this.currentEffects));
 			});
 		}
-	}
+	};
 	/**
 	 * Creates a signal that will trigger effects when it changes.
 	 * @param value initial value.
@@ -65,26 +101,10 @@ class DomSignals {
 		value?: T,
 		opt?: Partial<DomSignalOptions<T, TR>>
 	): DomSignalInterface<T, TR> => {
-		const options = new DomSignalOptions(opt);
-		let returnedValue = options.transform(value);
-		const signal = (): TR => {
-			if (this.currentEffects[0]) {
-				registry.effects.add(this.currentEffects[0]);
-				this.currentEffects[0].registries.add(registry);
-			}
-			return returnedValue;
-		};
-		signal.set = (v: T, forceChange: boolean = false) => {
-			if (forceChange || !options.equal(v, value)) {
-				value = v;
-				returnedValue = options.transform(value);
-				registry.effects.forEach(e => this.callEffect(e));
-			}
-		};
-
-		const registry: DomSignalRegistryInterface<T> = { effects: new Set() };
-		signal.registry = registry;
-
+		const options = new DomSignalOptions<T, TR>(opt);
+		const registry = new DomSignalRegistry<T, TR>(this, value, options);
+		const signal = () => registry.get();
+		signal.set = registry.set;
 		return signal;
 	};
 	/**
@@ -96,9 +116,7 @@ class DomSignals {
 	 */
 	public effect = (callback: () => void): DomSignalEffectHandler => {
 		const regEffect = new DomSignalRegistredEffect(callback);
-		this.currentEffects.unshift(regEffect);
-		callback();
-		this.currentEffects.shift();
+		regEffect.callEffect(this.currentEffects);
 		return new DomSignalEffectHandler(regEffect);
 	};
 	/**
@@ -111,7 +129,7 @@ class DomSignals {
 	public computed = <T>(
 		callback: () => T | Promise<T>,
 		opt?: Partial<DomSignalOptions<T, T>>
-	): (() => T) => {
+	): DomSignalComputedInterface<T> => {
 		const signal = this.signal<T>(undefined, opt);
 		const result = () => signal();
 		result.destroy = this.effect(async () => {
